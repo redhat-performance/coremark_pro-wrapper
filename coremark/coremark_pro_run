@@ -21,7 +21,7 @@
 # This script automates the execution of coremark.  It will determine the
 # set of default run parameters based on the system configuration.
 #
-test_name="coremark"
+test_name_run="coremark_plus"
 arguments="$@"
 chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
@@ -119,18 +119,6 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
-		--cpu_add)
-			echo cpu_add $2
-			cpu_add=$2
-			shift 2
-		;;
-		--powers_2)
-			powers_2=1
-			shift 1
-		;;
-		--usage)
-			usage $0
-		;;
 		-h)
 			usage $0
 		;;
@@ -144,81 +132,57 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [ $powers_2 -ne 0 ] && [ $cpu_add -ne 0 ]; then
-	echo Error, can not designate both cpu_add and powers_2
-	exit 1
-fi
-rm -rf coremark 2> /dev/null
-git clone --depth 1 --branch v1.01 https://github.com/eembc/coremark
-numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
-pushd coremark > /dev/null
-
-execute_coremark()
-{
-	touch *.c
-	touch */*.c
-	make XCFLAGS="-DMULTITHREAD=${2} -DUSE_PTHREAD -pthread"
-	#
-	# Move results
-	#
-	mv run1.log run1_iter=${1}_threads=${2}.log
-	mv run2.log run2_iter=${1}_threads=${2}.log
-}
+rm -rf coremark-pro 2> /dev/null
+git clone --depth 1 --branch v1.1.2743 https://github.com/eembc/coremark-pro
+pushd coremark-pro > /dev/null
 
 #
 # Iteration of test.
 #
+make TARGET=linux64 build
 for iter in $(seq 1 1 $to_times_to_run); do
-	if [ $powers_2 -eq 1 ]; then
-		cpu_count=1
-		while  [ $cpu_count -lt $numb_cpus ]; do
-			execute_coremark $iter $cpu_count
-			let "cpu_count=$cpu_count*2"
-		done
-		execute_coremark $iter $numb_cpus
-		continue;
-	fi
-	if [ $cpu_add -ne  0]; then
-		cpu_count=1
-		while  [ $cpu_count -lt $numb_cpus ]; do
-			execute_coremark $iter $cpu_count
-			let "cpu_count=${cpu_count}+${cpu_add}"
-		done
-		execute_coremark $iter $numb_cpus
-		continue;
-	fi
-	#
-	# Just the single case.
-	#
-	execute_coremark $iter $numb_cpus
+	make TARGET=linux64 XCMD='-c4' certify-all > coremark_pro_run_${iter}
 done
 
 #
 # Create the csv file.
 #
-csv_file=`mktemp /tmp/coremark_csv.XXXXX`
-for i in  `ls run*log`; do
-	iteration=`echo $i | cut -d'=' -f2 | cut -d'_' -f1`
-	threads=`echo $i | cut -d'=' -f3 | cut -d'.' -f1`
-	test_iters=`grep "Iterations/" $i | cut -d':' -f2 | sed "s/ //g"`
-	echo ${iteration}:${threads}:${test_iters} >> $csv_file
+
+echo Test:Multi iterations:Single Iterations:Scaling >> coremark_plus_results.csv
+items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
+for i in $items; do
+	multi_iter=0.0
+	single_iter=0.0
+	scaling=0.0
+	samples=0
+	for j in `ls -d coremark_pro_run_*`; do
+		line=`grep $i $j`
+		worker=`echo $line | awk '{print $2}'`
+		multi_iter=`echo $multi_iter+$worker | bc`
+		worker=`echo $line | awk '{print $3}'`
+		single_iter=`echo $single_iter+$worker | bc`
+		worker=`echo $line | awk '{print $4}'`
+		scaling=`echo $scaling+$worker | bc`
+		let "samples=$samples+1"
+	done
+	multi_iter=`echo "scale = 2;$multi_iter / ${samples}.00" | bc -l`
+	single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
+	scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
+	test_name=`echo $i | sed "s/\^//g"`
+	echo $test_name:$multi_iter:$single_iter:$scaling >> coremark_plus_results.csv
 done
-echo "iteration:threads:test passes" > coremark_results.csv
-sort -n $csv_file >> coremark_results.csv
 
 if [ $to_pbench -eq 0 ]; then
-	rm -rf /tmp/results_${test_name}_*
-	RESULTSDIR=/tmp/results_${test_name}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+	rm -rf /tmp/results_${test_name_run}_*
+	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
 	mkdir $RESULTSDIR
-	cp coremark_results.csv $RESULTSDIR
-	cp run*log $RESULTSDIR
+	cp coremark_plus_results.csv $RESULTSDIR
+	cp *run* $RESULTSDIR
 	pushd /tmp > /dev/null
-	ln -s ${RESULTSDIR} results_${test_name}_${to_tuned_setting}
-	mv  ${test_name}_*.out ${RESULTSDIR}
-	tar hcf results_${test_name}_${to_tuned_setting}.tar results_${test_name}_${to_tuned_setting}
-	cp  results_${test_name}_${to_tuned_setting}.tar results_pbench_${test_name}_${to_tuned_setting}.tar
+	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
+	mv  ${test_name_run}_*.out ${RESULTSDIR}
+	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
+	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
 	popd > /dev/null
 fi
 popd > /dev/null
-
-
