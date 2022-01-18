@@ -21,7 +21,7 @@
 # This script automates the execution of coremark.  It will determine the
 # set of default run parameters based on the system configuration.
 #
-test_name_run="coremark_plus"
+test_name_run="coremark_pro"
 arguments="$@"
 chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
@@ -148,7 +148,7 @@ done
 # Create the csv file.
 #
 
-echo Test:Multi iterations:Single Iterations:Scaling >> coremark_plus_results.csv
+echo Test:Multi iterations:Single Iterations:Scaling >> coremark_pro_results.csv
 items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 for i in $items; do
 	multi_iter=0.0
@@ -169,14 +169,14 @@ for i in $items; do
 	single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
 	scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
 	test_name=`echo $i | sed "s/\^//g"`
-	echo $test_name:$multi_iter:$single_iter:$scaling >> coremark_plus_results.csv
+	echo $test_name:$multi_iter:$single_iter:$scaling >> coremark_pro_results.csv
 done
 
 if [ $to_pbench -eq 0 ]; then
 	rm -rf /tmp/results_${test_name_run}_*
 	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
 	mkdir $RESULTSDIR
-	cp coremark_plus_results.csv $RESULTSDIR
+	cp coremark_pro_results.csv $RESULTSDIR
 	cp *run* $RESULTSDIR
 	pushd /tmp > /dev/null
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
