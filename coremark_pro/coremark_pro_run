@@ -132,8 +132,9 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-rm -rf coremark-pro 2> /dev/null
-git clone --depth 1 --branch v1.1.2743 https://github.com/eembc/coremark-pro
+if [ ! -d coremark-pro ]; then
+	git clone --depth 1 --branch v1.1.2743 https://github.com/eembc/coremark-pro
+fi
 pushd coremark-pro > /dev/null
 
 #
@@ -168,8 +169,8 @@ for i in $items; do
 	multi_iter=`echo "scale = 2;$multi_iter / ${samples}.00" | bc -l`
 	single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
 	scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
-	test_name=`echo $i | sed "s/\^//g"`
-	echo $test_name:$multi_iter:$single_iter:$scaling >> coremark_pro_results.csv
+	name=`echo $i | sed "s/\^//g"`
+	echo $name:$multi_iter:$single_iter:$scaling >> coremark_pro_results.csv
 done
 
 if [ $to_pbench -eq 0 ]; then
@@ -180,9 +181,13 @@ if [ $to_pbench -eq 0 ]; then
 	cp *run* $RESULTSDIR
 	pushd /tmp > /dev/null
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
-	mv  ${test_name_run}_*.out ${RESULTSDIR}
+	mv  ${test_name_run}_ ${RESULTSDIR}
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
 	popd > /dev/null
+else
+        source ~/.bashrc
+        echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
+        $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
 fi
 popd > /dev/null
