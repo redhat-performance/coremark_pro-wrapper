@@ -25,59 +25,208 @@ test_name_run="coremark_pro"
 arguments="$@"
 chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+cd $run_dir
 
 setup_done=0
 out_file=""
-use_pbench_version=0
 show_usage=0
 cpu_add=0
 powers_2=0
 
+summary_file="coremark_pro.summary"
+rm $summary_file
+
+pull_data()
+{
+	pro_file=`mktemp /tmp/pro_reduce_data.XXXXX`
+	test_name=${1}
+	grep "^${test_name}" coremark_pro_run* | cut -d':' -f2 > ${pro_file}
+	multicore=0.0
+	singlecore=0.0
+	scaling=0.0
+	iterations=0
+	while IFS= read -r line
+	do
+		let "iterations=$iterations+1"
+		value=`echo $line | awk '{print $2}'`
+		multicore=`echo "${multicore}+${value}"| bc -l`
+		value=`echo $line | awk '{print $3}'`
+		singlecore=`echo "${singlecore}+${value}"| bc -l`
+		value=`echo $line | awk '{print $4}'`
+		scaling=`echo "${scaling}+${value}"| bc -l`
+	done < "${pro_file}"
+	rm ${pro_file}
+	multicore=`echo "${multicore}/${iterations}" | bc -l`
+	singlecore=`echo "${singlecore}/${iterations}" | bc -l`
+	scaling=`echo "${scaling}/${iterations}" | bc -l`
+	printf "%-47s %10.2f %10.2f %10.2f\n" $test_name $multicore $singlecore $scaling >> $summary_file
+}
+
+produce_summary_report()
+{
+	found=0
+	while IFS= read -r line
+	do
+		if [[ $found -eq 1 ]]; then
+			if [[ ${line} == "" ]]; then
+				echo $line >> $summary_file
+				continue
+			fi
+			if [[ ${line} == "MARK"* ]]; then
+				echo $line >> $summary_file
+				continue
+			fi
+			if [[ ${line} == "Mark"* ]]; then
+				echo $line >> $summary_file
+				continue
+			fi
+			if [[ ${line} == "-----"* ]]; then
+				echo $line >> $summary_file
+				continue
+			fi
+			if [[ ${line} == "CoreMark"* ]]; then
+				found=0
+			fi
+			test_name=`echo $line | awk '{print $1}'`
+			pull_data $test_name
+			continue
+		fi
+		if [[ $line == "------"* ]]; then
+			found=1
+		fi
+		echo $line >> $summary_file
+	done < "coremark_pro_run_1"
+}
+
+generate_csv_file()
+{
+	#
+	# Create the csv file.
+	#
+
+	echo Test:Multi iterations:Single Iterations:Scaling >> coremark_pro_results.csv
+	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
+	for i in $items; do
+		multi_iter=0.0
+		single_iter=0.0
+		scaling=0.0
+		samples=0
+		for j in `ls -d coremark_pro_run_*`; do
+			line=`grep $i $j`
+			worker=`echo $line | awk '{print $2}'`
+			multi_iter=`echo $multi_iter+$worker | bc`
+			worker=`echo $line | awk '{print $3}'`
+			single_iter=`echo $single_iter+$worker | bc`
+			worker=`echo $line | awk '{print $4}'`
+			scaling=`echo $scaling+$worker | bc`
+			let "samples=$samples+1"
+		done
+		multi_iter=`echo "scale = 2;$multi_iter / ${samples}.00" | bc -l`
+		single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
+		scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
+		name=`echo $i | sed "s/\^//g"`
+		echo $name:$multi_iter:$single_iter:$scaling >> coremark_pro_results.csv
+	done
+}
+
+save_results()
+{
+	rm -rf /tmp/results_${test_name_run}_*
+	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
+	mkdir $RESULTSDIR
+	mv $summary_file $RESULTSDIR
+	cp coremark_pro_results.csv $RESULTSDIR
+	cp coremark_pro_run* $RESULTSDIR
+	pushd /tmp > /dev/null
+	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
+	mv  ${test_name_run}_ ${RESULTSDIR}
+	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
+	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
+}
+
+run_coremark_pro()
+{
+	if [ ! -d coremark-pro ]; then
+		git clone --depth 1 --branch v1.1.2743 https://github.com/eembc/coremark-pro
+	fi
+	pushd coremark-pro > /dev/null
+
+
+	if [ $to_pbench -eq 0 ]; then
+		#
+		# Iteration of test.
+		#
+		make TARGET=linux64 build
+		for iter in $(seq 1 1 $to_times_to_run); do
+			make TARGET=linux64 XCMD='-c4' certify-all > coremark_pro_run_${iter}
+		done
+
+		pushd coremark-pro > /dev/null
+		pwd >> /tmp/dvalin_debug
+		produce_summary_report
+		ls >> /tmp/dvalin_debug
+		generate_csv_file
+		save_results
+		popd > /dev/null
+	else
+		popd > /dev/null
+		source ~/.bashrc
+		arguments="${arguments} --test_iterations ${to_times_to_run}"
+		echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
+		$TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
+	fi
+}
+
+usage()
+{
+	echo "$1 Usage:"
+	echo "  --test_iterations n: number of times to run the test."
+	source test_tools/general_setup --usage
+	exit 0
+}
+
 #
 # Clone the repo that contains the common code and tools
 #
-tools_git=https://github.com/dvalinrh/test_tools
 
-found=0
-for arg in "$@"; do
-	if [ $found -eq 1 ]; then
-		tools_git=$arg
-		found=0
-	fi
-	if [[ $arg == "--tools_git" ]]; then
-		found=1
-	fi
+install_tools_git()
+{
+	tools_git=https://github.com/dvalinrh/test_tools
+
+	found=0
+	for arg in "$@"; do
+		if [ $found -eq 1 ]; then
+			tools_git=$arg
+			found=0
+		fi
+		if [[ $arg == "--tools_git" ]]; then
+			found=1
+		fi
+	
+		#
+		# We do the usage check here, as we do not want to be calling
+		# the common parsers then checking for usage here.  Doing so will
+		# result in the script exiting with out giving the test options.
+		#
+		if [[ $arg == "--usage" ]]; then
+			usage $0
+		fi
+	done
 
 	#
-	# We do the usage check here, as we do not want to be calling
-	# the common parsers then checking for usage here.  Doing so will
-	# result in the script exiting with out giving the test options.
+	# Check to see if the test tools directory exists.  If it does, we do not need to
+	# clone the repo.
 	#
-	if [[ $arg == "--usage" ]]; then
-		show_usage=1
+	if [ ! -d "test_tools" ]; then
+		git clone $tools_git
+		if [ $? -ne 0 ]; then
+			echo pulling git $tools_git failed.
+			exit
+		fi
 	fi
-done
+}
 
-#
-# Check to see if the test tools directory exists.  If it does, we do not need to
-# clone the repo.
-#
-if [ ! -d "test_tools" ]; then
-        git clone $tools_git
-        if [ $? -ne 0 ]; then
-                echo pulling git $tools_git failed.
-                exit
-        fi
-fi
-
-if [ $show_usage -eq 1 ]; then
-	echo "$1 Usage:"
-	echo "  --cpu_add n: add n cpus each iteration until hit max cpus"
-	echo "  --powers_2: starting from 1 cpu, keep doubling the cpus until max cpus"
-	source test_tools/general_setup --usage
-	exit 0
-fi
-
+install_tools_git
 #
 # Variables set by general setup.
 #
@@ -98,12 +247,11 @@ fi
 source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
-        "cpu_add"
+	"test_iterations"
 )
 
 NO_ARGUMENTS=(
-	"powers_2"
-        "usage"
+	"usage"
 )
 
 # read arguments
@@ -119,6 +267,10 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--test_iterations)
+			to_times_to_run=$2
+			shift 2
+		;;
 		-h)
 			usage $0
 		;;
@@ -132,62 +284,5 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-if [ ! -d coremark-pro ]; then
-	git clone --depth 1 --branch v1.1.2743 https://github.com/eembc/coremark-pro
-fi
-pushd coremark-pro > /dev/null
+run_coremark_pro
 
-#
-# Iteration of test.
-#
-make TARGET=linux64 build
-for iter in $(seq 1 1 $to_times_to_run); do
-	make TARGET=linux64 XCMD='-c4' certify-all > coremark_pro_run_${iter}
-done
-
-#
-# Create the csv file.
-#
-
-echo Test:Multi iterations:Single Iterations:Scaling >> coremark_pro_results.csv
-items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
-for i in $items; do
-	multi_iter=0.0
-	single_iter=0.0
-	scaling=0.0
-	samples=0
-	for j in `ls -d coremark_pro_run_*`; do
-		line=`grep $i $j`
-		worker=`echo $line | awk '{print $2}'`
-		multi_iter=`echo $multi_iter+$worker | bc`
-		worker=`echo $line | awk '{print $3}'`
-		single_iter=`echo $single_iter+$worker | bc`
-		worker=`echo $line | awk '{print $4}'`
-		scaling=`echo $scaling+$worker | bc`
-		let "samples=$samples+1"
-	done
-	multi_iter=`echo "scale = 2;$multi_iter / ${samples}.00" | bc -l`
-	single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
-	scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
-	name=`echo $i | sed "s/\^//g"`
-	echo $name:$multi_iter:$single_iter:$scaling >> coremark_pro_results.csv
-done
-
-if [ $to_pbench -eq 0 ]; then
-	rm -rf /tmp/results_${test_name_run}_*
-	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
-	mkdir $RESULTSDIR
-	cp coremark_pro_results.csv $RESULTSDIR
-	cp *run* $RESULTSDIR
-	pushd /tmp > /dev/null
-	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
-	mv  ${test_name_run}_ ${RESULTSDIR}
-	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
-	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
-	popd > /dev/null
-else
-        source ~/.bashrc
-        echo $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
-        $TOOLS_BIN/execute_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11
-fi
-popd > /dev/null
