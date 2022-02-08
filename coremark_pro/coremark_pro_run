@@ -149,7 +149,7 @@ save_results()
 run_coremark_pro()
 {
 	if [ ! -d coremark-pro ]; then
-		git clone --depth 1 --branch ${coremark_pro_versio} https://github.com/eembc/coremark-pro
+		git clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
 	fi
 	pushd coremark-pro > /dev/null
 
