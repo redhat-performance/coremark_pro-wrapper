@@ -22,6 +22,7 @@
 # set of default run parameters based on the system configuration.
 #
 coremark_pro_version="v1.1.2743"
+commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
 chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
@@ -135,7 +136,11 @@ save_results()
 	rm -rf /tmp/results_${test_name_run}_*
 	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
 	mkdir $RESULTSDIR
-	echo ${coremark_pro_version} > ${RESULTSDIR}/coremark_pro_version
+	if [[ $commit == "none" ]]; then
+		echo tag: ${coremark_pro_version} > ${RESULTSDIR}/coremark_pro_version
+	else
+		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
+	fi
 	mv $summary_file $RESULTSDIR
 	cp coremark_pro_results.csv $RESULTSDIR
 	cp coremark_pro_run* $RESULTSDIR
@@ -149,7 +154,14 @@ save_results()
 run_coremark_pro()
 {
 	if [ ! -d coremark-pro ]; then
-		git clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
+		if [[ $commit == "none" ]]; then
+			git clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
+		else
+			git clone https://github.com/eembc/coremark-pro
+			pushd coremark-pro > /dev/null
+			git checkout ${commit}
+			popd > /dev/null
+		fi
 	fi
 	pushd coremark-pro > /dev/null
 
@@ -180,6 +192,7 @@ run_coremark_pro()
 usage()
 {
 	echo "$1 Usage:"
+	echo "  --commit <n>: Commit to use.  If not designated, will use tag ${coremark_pro_version}"
 	echo "  --test_iterations n: number of times to run the test."
 	source test_tools/general_setup --usage
 	exit 0
@@ -247,6 +260,7 @@ install_tools_git
 source test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
+	"commit"
 	"test_iterations"
 )
 
@@ -267,6 +281,10 @@ eval set --$opts
 
 while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--commit)
+			commit=$2
+			shift 2
+		;;
 		--test_iterations)
 			to_times_to_run=$2
 			shift 2
