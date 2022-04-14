@@ -204,6 +204,7 @@ usage()
 
 install_tools_git()
 {
+	give_usage=0
 	tools_git=https://github.com/dvalinrh/test_tools
 
 	found=0
@@ -222,7 +223,7 @@ install_tools_git()
 		# result in the script exiting with out giving the test options.
 		#
 		if [[ $arg == "--usage" ]]; then
-			usage $0
+			give_usage=1
 		fi
 	done
 
@@ -237,9 +238,12 @@ install_tools_git()
 			exit
 		fi
 	fi
+	if [ $give_usage -eq 1 ]; then
+		usage $0
+	fi
 }
 
-install_tools_git
+install_tools_git "$@"
 #
 # Variables set by general setup.
 #
