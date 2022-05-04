@@ -26,8 +26,12 @@ commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
 chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
-run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
-cd $run_dir
+if [[ $0 != "./"* ]]; then
+	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+	cd $run_dir
+else
+	run_dir=`pwd`
+fi
 
 setup_done=0
 out_file=""
@@ -97,7 +101,7 @@ produce_summary_report()
 			found=1
 		fi
 		echo $line >> $summary_file
-	done < "coremark_pro_run_1"
+	done < "coremark_pro_run_${1}"
 }
 
 generate_csv_file()
@@ -106,7 +110,7 @@ generate_csv_file()
 	# Create the csv file.
 	#
 
-	echo Test:Multi iterations:Single Iterations:Scaling >> coremark_pro_results.csv
+	echo Test:Multi iterations:Single Iterations:Scaling > coremark_pro_results.csv
 	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 	for i in $items; do
 		multi_iter=0.0
@@ -171,12 +175,14 @@ run_coremark_pro()
 		# Iteration of test.
 		#
 		make TARGET=linux64 build
+		rm coremark_pro_run_*
 		for iter in $(seq 1 1 $to_times_to_run); do
 			make TARGET=linux64 XCMD='-c4' certify-all > coremark_pro_run_${iter}
 		done
-
-		pushd coremark-pro > /dev/null
-		produce_summary_report
+		pwd
+		for iter in $(seq 1 1 $to_times_to_run); do
+			produce_summary_report $iter
+		done
 		generate_csv_file
 		save_results
 		popd > /dev/null
