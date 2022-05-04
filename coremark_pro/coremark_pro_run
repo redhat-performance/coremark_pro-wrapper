@@ -200,7 +200,7 @@ usage()
 	echo "$1 Usage:"
 	echo "  --commit <n>: Commit to use.  If not designated, will use tag ${coremark_pro_version}"
 	echo "  --test_iterations n: number of times to run the test."
-	source test_tools/general_setup --usage
+	source test_tools-wrappers/general_setup --usage
 	exit 0
 }
 
@@ -211,7 +211,7 @@ usage()
 install_tools_git()
 {
 	give_usage=0
-	tools_git=https://github.com/dvalinrh/test_tools
+	tools_git=https://github.com/redhat-performance/test_tools-wrappers
 
 	found=0
 	for arg in "$@"; do
@@ -237,7 +237,7 @@ install_tools_git()
 	# Check to see if the test tools directory exists.  If it does, we do not need to
 	# clone the repo.
 	#
-	if [ ! -d "test_tools" ]; then
+	if [ ! -d "test_tools-wrappers" ]; then
 		git clone $tools_git
 		if [ $? -ne 0 ]; then
 			echo pulling git $tools_git failed.
@@ -267,7 +267,7 @@ install_tools_git "$@"
 # to_tuned_setting: tuned setting
 #
 
-source test_tools/general_setup "$@"
+source test_tools-wrappers/general_setup "$@"
 
 ARGUMENT_LIST=(
 	"commit"
