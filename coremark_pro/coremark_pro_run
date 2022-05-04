@@ -25,9 +25,13 @@ coremark_pro_version="v1.1.2743"
 commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
-chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
-run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
-cd $run_dir
+
+if [[ $0 == "./"* ]]; then
+	run_dir=`pwd`
+else
+	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
+	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
+fi
 
 setup_done=0
 out_file=""
