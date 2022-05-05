@@ -237,7 +237,7 @@ install_tools_git()
 	# Check to see if the test tools directory exists.  If it does, we do not need to
 	# clone the repo.
 	#
-	if [ ! -d "test_tools-wrappers" ]; then
+	if [ ! -d "test_tools" ]; then
 		git clone $tools_git test_tools
 		if [ $? -ne 0 ]; then
 			echo pulling git $tools_git failed.
