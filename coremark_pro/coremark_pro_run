@@ -25,7 +25,6 @@ coremark_pro_version="v1.1.2743"
 commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
-chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
@@ -40,12 +39,14 @@ else
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	run_dir=`echo $0 | cut -d'/' -f 1-${chars}`
 fi
+cd $run_dir
 
 setup_done=0
 out_file=""
 show_usage=0
 cpu_add=0
 powers_2=0
+no_overrides=0
 
 summary_file="coremark_pro.summary"
 rm $summary_file
@@ -163,6 +164,55 @@ save_results()
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
 }
 
+#
+# Update cjpeg-rose7-preset
+#
+
+update_options()
+{
+# $1 opt directory
+# $2 opt file
+# $3 value 1 set to
+# $4 value 2 set to
+
+	index=0
+
+	if [[ ! -f ${1}/${2}_old ]]; then
+		while IFS= read -r line
+		do
+			if [[ $line == *"override WLD_CMD_FLAGS"* ]]; then
+				if [ $index -eq 0 ]; then
+					echo "override WLD_CMD_FLAGS=${3}" >> ${2}_new
+					let "index=${index}+1"
+				else
+					echo "override WLD_CMD_FLAGS=${4}" >> ${2}_new
+				fi
+				continue
+			fi
+			echo $line >> ${2}_new
+		done < "${1}/${2}"
+		mv ${1}/${2} ${1}/${2}_old
+		mv ${2}_new ${1}/${2}
+	fi
+}
+
+update_build_options()
+{
+	pushd workloads > /dev/null
+
+	update_options cjpeg-rose7-preset cjpeg-rose7-preset.opt "-i2000" "-i50000"
+	update_options core core.opt "-i1000" "-i1000"
+	update_options linear_alg-mid-100x100-sp linear_alg-mid-100x100-sp.opt "-i3000" "-i100000"
+	update_options loops-all-mid-10k-sp loops-all-mid-10k-sp.opt "-i1000" "-i2000"
+	update_options nnet_test nnet_test.opt "-i1000" "-i3000"
+	update_options parser-125k parser-125k.opt "-i1000" "-i1000"
+	update_options radix2-big-64k radix2-big-64k.opt "-i10000" "-i200000"
+	update_options sha-test sha-test.opt "-i3000" "-i100000"
+	update_options zip-test zip-test.opt "-i2000" "-i40000"
+
+	popd >/dev/null
+}
+
 run_coremark_pro()
 {
 	if [ ! -d coremark-pro ]; then
@@ -182,15 +232,18 @@ run_coremark_pro()
 		#
 		# Iteration of test.
 		#
+		if [ $no_overrides -eq 0 ]; then
+			update_build_options
+		fi
 		make TARGET=linux64 build
-		rm coremark_pro_run_*
 		for iter in $(seq 1 1 $to_times_to_run); do
 			make TARGET=linux64 XCMD='-c4' certify-all > coremark_pro_run_${iter}
 		done
-		pwd
+
 		for iter in $(seq 1 1 $to_times_to_run); do
 			produce_summary_report $iter
 		done
+
 		generate_csv_file
 		save_results
 		popd > /dev/null
@@ -207,6 +260,7 @@ usage()
 {
 	echo "$1 Usage:"
 	echo "  --commit <n>: Commit to use.  If not designated, will use tag ${coremark_pro_version}"
+	echo "  --no-overrides: If present we will not tune the make files"
 	echo "  --test_iterations n: number of times to run the test."
 	source test_tools/general_setup --usage
 	exit 0
@@ -283,6 +337,7 @@ ARGUMENT_LIST=(
 )
 
 NO_ARGUMENTS=(
+	"no-overrides"
 	"usage"
 )
 
@@ -303,6 +358,10 @@ while [[ $# -gt 0 ]]; do
 			commit=$2
 			shift 2
 		;;
+		--no-overrides)
+			no_overrides=1
+			shift 1
+		;;
 		--test_iterations)
 			to_times_to_run=$2
 			shift 2
@@ -320,6 +379,9 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
+if [[ -d "coremark-pro" ]]; then
+	rm -rf coremark-pro
+fi
 run_coremark_pro
 
 exit 0
