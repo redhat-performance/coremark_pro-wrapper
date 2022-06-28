@@ -154,7 +154,7 @@ save_results()
 	else
 		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
 	fi
-	cp ${cur_dir}/meta_data.yml ${RESULTSDIR}
+	cp ${curdir}/meta_data.yml ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
 	cp coremark_pro_results.csv $RESULTSDIR
 	cp coremark_pro_run* $RESULTSDIR
