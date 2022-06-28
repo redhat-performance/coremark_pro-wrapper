@@ -26,13 +26,13 @@ commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
 
+curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
 	if [[ $chars == 1 ]]; then
 		run_dir=`pwd`
 	else
 		run_dir=`echo $0 | cut -d'/' -f 1-${chars} | cut -d'.' -f2-`
-		curdir=`pwd`
 		run_dir="${curdir}${run_dir}"
 	fi
 else
@@ -154,6 +154,7 @@ save_results()
 	else
 		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
 	fi
+	cp ${cur_dir}/meta_data.yml ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
 	cp coremark_pro_results.csv $RESULTSDIR
 	cp coremark_pro_run* $RESULTSDIR
@@ -250,6 +251,7 @@ run_coremark_pro()
 	else
 		popd > /dev/null
 		source ~/.bashrc
+		cd $curdir
 		arguments="${arguments} --test_iterations ${to_times_to_run}"
 		echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
 		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
