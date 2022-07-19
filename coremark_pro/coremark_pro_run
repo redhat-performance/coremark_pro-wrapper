@@ -26,6 +26,15 @@ commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
 
+
+if [ ! -f "/tmp/${test_name_run}.out" ]; then
+	command="${0} $@"
+	$command &> /tmp/${test_name_run}.out
+	cat /tmp/${test_name_run}.out
+	rm /tmp/${test_name_run}.out
+	exit
+fi
+
 curdir=`pwd`
 if [[ $0 == "./"* ]]; then
 	chars=`echo $0 | awk -v RS='/' 'END{print NR-1}'`
@@ -149,6 +158,7 @@ save_results()
 	rm -rf /tmp/results_${test_name_run}_*
 	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
 	mkdir $RESULTSDIR
+	mv /tmp/${test_name_run}.out ${RESULTSDIR}
 	if [[ $commit == "none" ]]; then
 		echo tag: ${coremark_pro_version} > ${RESULTSDIR}/coremark_pro_version
 	else
@@ -157,6 +167,12 @@ save_results()
 	cp ${curdir}/meta_data.yml ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
 	cp coremark_pro_results.csv $RESULTSDIR
+	grep -q ":::" coremark_pro_results.csv
+	if [ $? -eq 0 ]; then
+		echo Failed > $RESULTSDIR/test_results_report
+	else
+		echo Ran > $RESULTSDIR/test_results_report
+	fi
 	cp coremark_pro_run* $RESULTSDIR
 	pushd /tmp > /dev/null
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
