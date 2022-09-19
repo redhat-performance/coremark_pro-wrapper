@@ -128,7 +128,7 @@ generate_csv_file()
 	# Create the csv file.
 	#
 
-	echo Test:Multi iterations:Single Iterations:Scaling > coremark_pro_results.csv
+	echo Test:Multi iterations:Single Iterations:Scaling > results.csv
 	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 	for i in $items; do
 		multi_iter=0.0
@@ -149,7 +149,7 @@ generate_csv_file()
 		single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
 		scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
 		name=`echo $i | sed "s/\^//g"`
-		echo $name:$multi_iter:$single_iter:$scaling >> coremark_pro_results.csv
+		echo $name:$multi_iter:$single_iter:$scaling >> results.csv
 	done
 }
 
@@ -164,10 +164,10 @@ save_results()
 	else
 		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
 	fi
-	cp coremark_pro_results.csv $RESULTSDIR
+	cp results.csv $RESULTSDIR
 	cp ${curdir}/meta_data.yml ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
-	grep -q ":::" coremark_pro_results.csv
+	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
 		echo Failed > $RESULTSDIR/test_results_report
 	else
@@ -176,10 +176,12 @@ save_results()
 	cp coremark_pro_run* $RESULTSDIR
 	value=`grep CoreMark-PRO  ${RESULTSDIR}/coremark_pro.summary | head -1`
 	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
-	echo "Score:${value_out}"  >>  $RESULTSDIR/coremark_pro_results.csv
+	echo "Score:${value_out}"  >>  $RESULTSDIR/results.csv
 	pushd /tmp > /dev/null
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
 	mv  ${test_name_run}_ ${RESULTSDIR}
+	rm -f results_pbench.tar 
+	find -L $results_dir -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
 }
