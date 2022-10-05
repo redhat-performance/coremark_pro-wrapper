@@ -2,7 +2,7 @@
 #
 #                         License
 #
-# Copyright (C) 2021  David Valin dvalin@redhat.com
+# Copyright (C) 2022  David Valin dvalin@redhat.com
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -258,8 +258,9 @@ run_coremark_pro()
 			update_build_options
 		fi
 		make TARGET=linux64 build
+		numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 		for iter in $(seq 1 1 $to_times_to_run); do
-			make TARGET=linux64 XCMD='-c4' certify-all > coremark_pro_run_${iter}
+			make TARGET=linux64 XCMD=-c${numb_cpus} certify-all > coremark_pro_run_${iter}
 		done
 
 		for iter in $(seq 1 1 $to_times_to_run); do
