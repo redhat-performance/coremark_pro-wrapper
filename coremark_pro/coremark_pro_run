@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
-# This script automates the execution of coremark.  It will determine the
+# This script automates the execution of coremark_pro.  It will determine the
 # set of default run parameters based on the system configuration.
 #
 coremark_pro_version="v1.1.2743"
