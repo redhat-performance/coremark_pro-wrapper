@@ -181,7 +181,7 @@ save_results()
 	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
 	mv  ${test_name_run}_ ${RESULTSDIR}
 	rm -f results_pbench.tar 
-	working_dir=`ls -rtd /tmp/results*${test_name}* | grep -v tar | tail -1`
+	working_dir=`ls -rtd /tmp/results*${test_name_run}* | grep -v tar | tail -1`
 	find -L ${working_dir} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
 	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
 	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
