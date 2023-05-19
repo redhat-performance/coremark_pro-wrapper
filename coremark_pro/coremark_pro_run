@@ -26,13 +26,19 @@ commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
 
+exit_out()
+{
+	echo $1
+	exit $2
+}
 
 if [ ! -f "/tmp/${test_name_run}.out" ]; then
 	command="${0} $@"
 	$command &> /tmp/${test_name_run}.out
+	rtc=$?
 	cat /tmp/${test_name_run}.out
 	rm /tmp/${test_name_run}.out
-	exit
+	exit $rtc
 fi
 
 curdir=`pwd`
@@ -240,16 +246,24 @@ run_coremark_pro()
 {
 	if [ ! -d coremark-pro ]; then
 		if [[ $commit == "none" ]]; then
-			git clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
+			GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
+			if [ $? -ne 0 ]; then
+				exit_out "Failed to clone https://github.com/eembc/coremark-pro version ${coremark_pro_version}" 1
+			fi
 		else
-			git clone https://github.com/eembc/coremark-pro
+			GIT_TERMINAL_PROMPT=0 git clone https://github.com/eembc/coremark-pro
+			if [ $? != 0 ]; then
+				exit_out "Failed to clone https://github.com/eembc/coremark-pro" 1
+			fi
 			pushd coremark-pro > /dev/null
-			git checkout ${commit}
+			GIT_TERMINAL_PROMPT=0 git checkout ${commit}
+			if [ $? -ne 0 ]; then
+				exit_out "Failed to checkout ${commit}" 1
+			fi
 			popd > /dev/null
 		fi
 	fi
 	pushd coremark-pro > /dev/null
-
 
 	if [ $to_pbench -eq 0 ]; then
 		#
@@ -261,7 +275,11 @@ run_coremark_pro()
 		make TARGET=linux64 build
 		numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 		for iter in $(seq 1 1 $to_times_to_run); do
-			make TARGET=linux64 XCMD=-c${numb_cpus} certify-all > coremark_pro_run_${iter}
+			make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
+			make $make_flags > coremark_pro_run_${iter}
+			if [ $? -ne 0 ]; then
+				exit_out "make Failed, make $make_flags" 1
+			fi
 		done
 
 		for iter in $(seq 1 1 $to_times_to_run); do
@@ -278,6 +296,9 @@ run_coremark_pro()
 		arguments="${arguments} --test_iterations ${to_times_to_run}"
 		echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
 		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
+		if [ $? -ne 0 ]; then
+			exit_out "Execution via pbench failed\n" 1
+		fi
 	fi
 }
 
@@ -325,10 +346,9 @@ install_tools_git()
 	# clone the repo.
 	#
 	if [ ! -d "test_tools" ]; then
-		git clone $tools_git test_tools
+		GIT_TERMINAL_PROMPT=0 git clone $tools_git test_tools
 		if [ $? -ne 0 ]; then
-			echo pulling git $tools_git failed.
-			exit
+			exit_out "pulling git $tools_git failed." 1
 		fi
 	fi
 	if [ $give_usage -eq 1 ]; then
@@ -398,8 +418,7 @@ while [[ $# -gt 0 ]]; do
 			break
 		;;
 		*)
-			echo option not found $1
-			usage $0
+			exit_out "option not found $1" 1
 		;;
 	esac
 done
