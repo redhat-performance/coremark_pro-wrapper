@@ -275,9 +275,10 @@ run_coremark_pro()
 		make TARGET=linux64 build
 		numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 		for iter in $(seq 1 1 $to_times_to_run); do
-			make TARGET=linux64 XCMD=-c${numb_cpus} certify-all > coremark_pro_run_${iter}
+			make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
+			make $make_flags > coremark_pro_run_${iter}
 			if [ $? -ne 0 ]; then
-				exit_out "make Failed, make TARGET=linux64 XCMD=-c${numb_cpus} certify-all" 1
+				exit_out "make Failed, make $make_flags" 1
 			fi
 		done
 
