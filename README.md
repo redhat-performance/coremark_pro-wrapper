@@ -1,21 +1,42 @@
-#
-# Copyright (C) 2021  David Valin dvalin@redhat.com
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-#
-#
-# The coremark-wrapper provides an automated means of running the coremark benchmark.
-#
+Automation wrapper for coremark_pro
 
+Description: CoreMark®-PRO is a comprehensive, advanced processor benchmark that
+    works with and enhances the market-proven industry-standard EEMBC CoreMark®
+    benchmark. While CoreMark stresses the CPU pipeline, CoreMark-PRO tests the
+    entire processor, adding comprehensive support for multicore technology, a
+    combination of integer and floating-point workloads, and data sets for
+    utilizing larger memory subsystems. Together, EEMBC CoreMark and CoreMark-PRO
+    provide a standard benchmark covering the spectrum from low-end microcontrollers
+    to high-performance computing processors.
+    For more information see: https://github.com/eembc/coremark-pro/blob/main/README.md
+  
+Location of underlying workload: https://github.com/eembc/coremark-pro
+
+Packages required: bc,numactl
+
+To run:
+[root@hawkeye ~]# git clone https://github.com/redhat-performance/coremark_pro-wrapper
+[root@hawkeye ~]# coremark_pro-wrapper/coremark_pro/coremark_pro_run
+
+
+Options
+  --commit <n>: Commit to use.  If not designated, will use tag v1.1.2743
+  --no-overrides: If present we will not tune the make files
+  --test_iterations n: number of times to run the test.
+General options
+  --home_parent <value>: Our parent home directory.  If not set, defaults to current working directory.
+  --host_config <value>: default is the current host name.
+  --iterations <value>: Number of times to run the test, defaults to 1.
+  --pbench: use pbench-user-benchmark and place information into pbench, defaults to do not use.
+  --pbench_user <value>: user who started everything. Defaults to the current user.
+  --pbench_copy: Copy the pbench data, not move it.
+  --pbench_stats: What stats to gather. Defaults to all stats.
+  --run_label: the label to associate with the pbench run. No default setting.
+  --run_user: user that is actually running the test on the test system. Defaults to user running wrapper.
+  --sys_type: Type of system working with, aws, azure, hostname.  Defaults to hostname.
+  --sysname: name of the system running, used in determing config files.  Defaults to hostname.
+  --tuned_setting: used in naming the tar file, default for RHEL is the current active tuned.  For non
+    RHEL systems, default is none.
+  --usage: this usage message.
+
+Note: The script does not install pbench for you.  You need to do that manually.
