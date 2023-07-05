@@ -18,7 +18,7 @@ To run:
 [root@hawkeye ~]# git clone https://github.com/redhat-performance/coremark_pro-wrapper
 [root@hawkeye ~]# coremark_pro-wrapper/coremark_pro/coremark_pro_run
 
-
+```
 Options
   --commit <n>: Commit to use.  If not designated, will use tag v1.1.2743
   --no-overrides: If present we will not tune the make files
@@ -38,5 +38,6 @@ General options
   --tuned_setting: used in naming the tar file, default for RHEL is the current active tuned.  For non
     RHEL systems, default is none.
   --usage: this usage message.
+```
 
 Note: The script does not install pbench for you.  You need to do that manually.
