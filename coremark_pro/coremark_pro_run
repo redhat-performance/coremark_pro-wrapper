@@ -177,7 +177,7 @@ save_results()
 		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
 	fi
 	cp results.csv $RESULTSDIR
-	cp ${curdir}/meta_data.yml ${RESULTSDIR}
+	cp ${curdir}/meta_data*.yml ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
 	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
