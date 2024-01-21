@@ -73,7 +73,7 @@ summary_file="coremark_pro.summary"
 rm $summary_file
 
 # Gather hardware information
-${curdir}/test_tools/gather_data ${curdir}
+$run_dir/test_tools/gather_data ${curdir}
 
 pull_data()
 {
@@ -181,7 +181,7 @@ save_results()
 	fi
 	cp results.csv $RESULTSDIR
 	cp ${curdir}/meta_data*.yml ${RESULTSDIR}
-	${curdir}/test_tools/move_data $curdir ${RESULTSDIR}
+	$run_dir/test_tools/move_data $curdir ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
 	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
