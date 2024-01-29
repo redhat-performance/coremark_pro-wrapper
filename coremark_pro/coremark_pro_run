@@ -72,6 +72,9 @@ no_overrides=0
 summary_file="coremark_pro.summary"
 rm $summary_file
 
+# Gather hardware information
+$run_dir/test_tools/gather_data ${curdir}
+
 pull_data()
 {
 	pro_file=`mktemp /tmp/pro_reduce_data.XXXXX`
@@ -178,6 +181,7 @@ save_results()
 	fi
 	cp results.csv $RESULTSDIR
 	cp ${curdir}/meta_data*.yml ${RESULTSDIR}
+	$run_dir/test_tools/move_data $curdir ${RESULTSDIR}
 	mv $summary_file $RESULTSDIR
 	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
