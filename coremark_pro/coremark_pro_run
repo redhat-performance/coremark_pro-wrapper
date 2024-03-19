@@ -167,29 +167,20 @@ generate_csv_file()
 		name=`echo $i | sed "s/\^//g"`
 		echo $name:$multi_iter:$single_iter:$scaling >> results.csv
 	done
-	grep -q ":::" results.csv
-	if [ $? -ne 0 ]; then
-		echo Failed > $RESULTS_PATH/test_results_report
-	else
-		echo Ran > $RESULTS_PATH/test_results_report
-	fi
 }
 
 save_results()
 {
-	rm -rf /tmp/results_${test_name_run}_*
-	RESULTSDIR=/tmp/results_${test_name_run}_${to_tuned_setting}_$(date "+%Y.%m.%d-%H.%M.%S")
-	mkdir $RESULTSDIR
-	mv /tmp/${test_name_run}.out ${RESULTSDIR}
-	if [[ $commit == "none" ]]; then
-		echo tag: ${coremark_pro_version} > ${RESULTSDIR}/coremark_pro_version
-	else
-		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
-	fi
-	value=`grep CoreMark-PRO  ${RESULTSDIR}/coremark_pro.summary | head -1`
+	value=`grep CoreMark-PRO  coremark_pro.summary | head -1`
 	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
-	echo "Score:${value_out}"  >>  $RESULTSDIR/results.csv
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	echo "Score:${value_out}"  >>  results.csv
+	grep -q ":::" results.csv
+	if [ $? -eq 0 ]; then
+		echo Failed > test_results_report
+	else
+		echo Ran > test_results_report
+	fi
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
