@@ -75,6 +75,7 @@ rm $summary_file
 # Gather hardware information
 $run_dir/test_tools/gather_data ${curdir}
 
+
 pull_data()
 {
 	pro_file=`mktemp /tmp/pro_reduce_data.XXXXX`
@@ -166,6 +167,12 @@ generate_csv_file()
 		name=`echo $i | sed "s/\^//g"`
 		echo $name:$multi_iter:$single_iter:$scaling >> results.csv
 	done
+	grep -q ":::" results.csv
+	if [ $? -ne 0 ]; then
+		echo Failed > $RESULTS_PATH/test_results_report
+	else
+		echo Ran > $RESULTS_PATH/test_results_report
+	fi
 }
 
 save_results()
@@ -179,28 +186,10 @@ save_results()
 	else
 		echo commit: ${commit} > ${RESULTSDIR}/coremark_pro_version
 	fi
-	cp results.csv $RESULTSDIR
-	cp ${curdir}/meta_data*.yml ${RESULTSDIR}
-	$run_dir/test_tools/move_data $curdir ${RESULTSDIR}
-	mv $summary_file $RESULTSDIR
-	grep -q ":::" results.csv
-	if [ $? -eq 0 ]; then
-		echo Failed > $RESULTSDIR/test_results_report
-	else
-		echo Ran > $RESULTSDIR/test_results_report
-	fi
-	cp coremark_pro_run* $RESULTSDIR
 	value=`grep CoreMark-PRO  ${RESULTSDIR}/coremark_pro.summary | head -1`
 	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
 	echo "Score:${value_out}"  >>  $RESULTSDIR/results.csv
-	pushd /tmp > /dev/null
-	ln -s ${RESULTSDIR} results_${test_name_run}_${to_tuned_setting}
-	mv  ${test_name_run}_ ${RESULTSDIR}
-	rm -f results_pbench.tar 
-	working_dir=`ls -rtd /tmp/results*${test_name_run}* | grep -v tar | tail -1`
-	find -L ${working_dir} -type f | tar --transform 's/.*\///g' -cf results_pbench.tar --files-from=/dev/stdin
-	tar hcf results_${test_name_run}_${to_tuned_setting}.tar results_${test_name_run}_${to_tuned_setting}
-	cp  results_${test_name_run}_${to_tuned_setting}.tar results_pbench_${test_name_run}_${to_tuned_setting}.tar
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
@@ -410,6 +399,7 @@ eval set --$opts
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--commit)
+			coremark_pro_version=$2
 			commit=$2
 			shift 2
 		;;
