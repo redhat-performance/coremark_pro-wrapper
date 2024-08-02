@@ -70,9 +70,7 @@ powers_2=0
 no_overrides=0
 
 summary_file="coremark_pro.summary"
-if [ -f $summary_file ]; then
-	rm $summary_file
-fi
+rm -f $summary_file
 
 # Gather hardware information
 $curdir/test_tools/gather_data ${curdir}
