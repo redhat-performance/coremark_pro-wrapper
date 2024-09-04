@@ -144,7 +144,8 @@ generate_csv_file()
 	# Create the csv file.
 	#
 
-	echo Test:Multi iterations:Single Iterations:Scaling > results.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name
+	echo Test:Multi iterations:Single Iterations:Scaling >> results.csv
 	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 	for i in $items; do
 		multi_iter=0.0
