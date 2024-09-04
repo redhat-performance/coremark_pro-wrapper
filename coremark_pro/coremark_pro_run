@@ -70,10 +70,10 @@ powers_2=0
 no_overrides=0
 
 summary_file="coremark_pro.summary"
-rm $summary_file
+rm -f $summary_file
 
 # Gather hardware information
-$run_dir/test_tools/gather_data ${curdir}
+$curdir/test_tools/gather_data ${curdir}
 
 
 pull_data()
@@ -180,7 +180,7 @@ save_results()
 	else
 		echo Ran > test_results_report
 	fi
-	${run_dir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
@@ -236,12 +236,12 @@ run_coremark_pro()
 {
 	if [ ! -d coremark-pro ]; then
 		if [[ $commit == "none" ]]; then
-			GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
+			GIT_TERMINAL_PROMPT=0 git -c advice.detachedHead=false clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
 			if [ $? -ne 0 ]; then
 				exit_out "Failed to clone https://github.com/eembc/coremark-pro version ${coremark_pro_version}" 1
 			fi
 		else
-			GIT_TERMINAL_PROMPT=0 git clone https://github.com/eembc/coremark-pro
+			GIT_TERMINAL_PROMPT=0 git -c advice.detachedHead=false clone https://github.com/eembc/coremark-pro
 			if [ $? != 0 ]; then
 				exit_out "Failed to clone https://github.com/eembc/coremark-pro" 1
 			fi
@@ -262,13 +262,23 @@ run_coremark_pro()
 		if [ $no_overrides -eq 0 ]; then
 			update_build_options
 		fi
-		make TARGET=linux64 build
+		#
+		# Silence warnings etc.
+		#
+		make TARGET=linux64 build >>/dev/null 2>&1
+		if [ $? -ne 0 ]; then
+			#
+			# Make failed, rerun and do not keep quiet about it.
+			#
+			make TARGET=linux64 build
+			exit_out "make of test failed, exiting" 1
+		fi
 		numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 		for iter in $(seq 1 1 $to_times_to_run); do
 			make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
-			make $make_flags > coremark_pro_run_${iter}
+			make -s $make_flags > coremark_pro_run_${iter}
 			if [ $? -ne 0 ]; then
-				exit_out "make Failed, make $make_flags" 1
+				exit_out "Run failed, make $make_flags" 1
 			fi
 		done
 
@@ -298,7 +308,7 @@ usage()
 	echo "  --commit <n>: Commit to use.  If not designated, will use tag ${coremark_pro_version}"
 	echo "  --no-overrides: If present we will not tune the make files"
 	echo "  --test_iterations n: number of times to run the test."
-	source test_tools/general_setup --usage
+	source ${curdir}/test_tools/general_setup --usage
 	exit 0
 }
 
@@ -335,8 +345,8 @@ install_tools_git()
 	# Check to see if the test tools directory exists.  If it does, we do not need to
 	# clone the repo.
 	#
-	if [ ! -d "test_tools" ]; then
-		GIT_TERMINAL_PROMPT=0 git clone $tools_git test_tools
+	if [ ! -d "${curdir}/test_tools" ]; then
+		GIT_TERMINAL_PROMPT=0 git clone $tools_git ${curdir}/test_tools
 		if [ $? -ne 0 ]; then
 			exit_out "pulling git $tools_git failed." 1
 		fi
@@ -364,7 +374,7 @@ install_tools_git "$@"
 # to_tuned_setting: tuned setting
 #
 
-source test_tools/general_setup "$@"
+source ${curdir}/test_tools/general_setup "$@"
 
 ARGUMENT_LIST=(
 	"commit"
