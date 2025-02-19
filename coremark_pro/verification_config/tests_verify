@@ -1,0 +1,4 @@
+Required_Systems: intel,amd,arm
+Via_Zathras: No
+fields: Test,sm:Multi iterations,n:Single Iterations,n:Scaling,n
+test:--iterations 1  --no-overrides:base_test_results/test1

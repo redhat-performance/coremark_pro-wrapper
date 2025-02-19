@@ -1,0 +1,79 @@
+Starting build process for cjpeg-rose7-preset/ core/ linear_alg-mid-100x100-sp/ loops-all-mid-10k-sp/ nnet_test/ parser-125k/ radix2-big-64k/ sha-test/ zip-test/
+Starting certifcation process for cjpeg-rose7-preset/ core/ linear_alg-mid-100x100-sp/ loops-all-mid-10k-sp/ nnet_test/ parser-125k/ radix2-big-64k/ sha-test/ zip-test/
+	Gathering results for single
+	Verification run for cjpeg-rose7-preset/
+	Performance runs for cjpeg-rose7-preset/
+	Saving results for cjpeg-rose7-preset/
+	Verification run for core/
+	Performance runs for core/
+	Saving results for core/
+	Verification run for linear_alg-mid-100x100-sp/
+	Performance runs for linear_alg-mid-100x100-sp/
+	Saving results for linear_alg-mid-100x100-sp/
+	Verification run for loops-all-mid-10k-sp/
+	Performance runs for loops-all-mid-10k-sp/
+	Saving results for loops-all-mid-10k-sp/
+	Verification run for nnet_test/
+	Performance runs for nnet_test/
+	Saving results for nnet_test/
+	Verification run for parser-125k/
+	Performance runs for parser-125k/
+	Saving results for parser-125k/
+	Verification run for radix2-big-64k/
+	Performance runs for radix2-big-64k/
+	Saving results for radix2-big-64k/
+	Verification run for sha-test/
+	Performance runs for sha-test/
+	Saving results for sha-test/
+	Verification run for zip-test/
+	Performance runs for zip-test/
+	Saving results for zip-test/
+	Gathering results for best
+	Verification run for cjpeg-rose7-preset/
+	Performance runs for cjpeg-rose7-preset/
+	Saving results for cjpeg-rose7-preset/
+	Verification run for core/
+	Performance runs for core/
+	Saving results for core/
+	Verification run for linear_alg-mid-100x100-sp/
+	Performance runs for linear_alg-mid-100x100-sp/
+	Saving results for linear_alg-mid-100x100-sp/
+	Verification run for loops-all-mid-10k-sp/
+	Performance runs for loops-all-mid-10k-sp/
+	Saving results for loops-all-mid-10k-sp/
+	Verification run for nnet_test/
+	Performance runs for nnet_test/
+	Saving results for nnet_test/
+	Verification run for parser-125k/
+	Performance runs for parser-125k/
+	Saving results for parser-125k/
+	Verification run for radix2-big-64k/
+	Performance runs for radix2-big-64k/
+	Saving results for radix2-big-64k/
+	Verification run for sha-test/
+	Performance runs for sha-test/
+	Saving results for sha-test/
+	Verification run for zip-test/
+	Performance runs for zip-test/
+	Saving results for zip-test/
+
+WORKLOAD RESULTS TABLE
+
+                                                 MultiCore SingleCore           
+Workload Name                                     (iter/s)   (iter/s)    Scaling
+----------------------------------------------- ---------- ---------- ----------
+cjpeg-rose7-preset                                  370.37     147.06       2.52
+core                                                  4.18       1.71       2.44
+linear_alg-mid-100x100-sp                           320.51     148.37       2.16
+loops-all-mid-10k-sp                                 16.72       6.53       2.56
+nnet_test                                            19.16       8.51       2.25
+parser-125k                                         117.65      34.48       3.41
+radix2-big-64k                                     1602.56     614.25       2.61
+sha-test                                            384.62     192.31       2.00
+zip-test                                            285.71     125.00       2.29
+
+MARK RESULTS TABLE
+
+Mark Name                                        MultiCore SingleCore    Scaling
+----------------------------------------------- ---------- ---------- ----------
+CoreMark-PRO                                      13134.03    5372.29       2.44

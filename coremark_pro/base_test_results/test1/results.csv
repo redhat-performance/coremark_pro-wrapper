@@ -1,0 +1,23 @@
+# Test general meta start
+# Test: CoreMark-PRO
+# Results version: v1.1.2743
+# Host: m5.xlarge
+# Sys environ: aws
+# Tuned: virtual-guest
+# OS: 5.14.0-503.11.1.el9_5.x86_64
+# Numa nodes: 1
+# CPU family: Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz
+# Number cpus: 4
+# Memory: 15903220kB
+# Test general meta end
+Test:Multi iterations:Single Iterations:Scaling
+cjpeg-rose7-preset:370.37:147.06:2.52
+core:4.18:1.71:2.44
+linear_alg-mid-100x100-sp:320.51:148.37:2.16
+loops-all-mid-10k-sp:16.72:6.53:2.56
+nnet_test:19.16:8.51:2.25
+parser-125k:117.65:34.48:3.41
+radix2-big-64k:1602.56:614.25:2.61
+sha-test:384.62:192.31:2.00
+zip-test:285.71:125.00:2.29
+Score:13134.03:5372.29
