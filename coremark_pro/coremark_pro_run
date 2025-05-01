@@ -174,7 +174,7 @@ save_results()
 {
 	value=`grep CoreMark-PRO  coremark_pro.summary | head -1`
 	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
-	echo "Score:${value_out}"  >>  results.csv
+	echo "Score:${value_out}:0.0:0.0"  >>  results.csv
 	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
 		echo Failed > test_results_report
@@ -375,7 +375,9 @@ install_tools_git "$@"
 # to_tuned_setting: tuned setting
 #
 
+pushd ${curdir} 2> /dev/null
 source ${curdir}/test_tools/general_setup "$@"
+popd 2> /dev/null
 
 ARGUMENT_LIST=(
 	"commit"
