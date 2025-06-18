@@ -23,8 +23,9 @@
 #
 coremark_pro_version="v1.1.2743"
 commit="none"
-test_name_run="coremark_pro"
+test_name="coremark_pro"
 arguments="$@"
+results_file=results_"${test_name}".csv
 
 exit_out()
 {
@@ -127,8 +128,8 @@ produce_summary_report()
 			if [[ ${line} == "CoreMark"* ]]; then
 				found=0
 			fi
-			test_name=`echo $line | awk '{print $1}'`
-			pull_data $test_name
+			ind_test_name=`echo $line | awk '{print $1}'`
+			pull_data $ind_test_name
 			continue
 		fi
 		if [[ $line == "------"* ]]; then
@@ -144,8 +145,8 @@ generate_csv_file()
 	# Create the csv file.
 	#
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name
-	echo Test:Multi iterations:Single Iterations:Scaling >> results.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file $results_file --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name
+	echo Test:Multi iterations:Single Iterations:Scaling >> $results_file
 	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 	for i in $items; do
 		multi_iter=0.0
@@ -166,22 +167,19 @@ generate_csv_file()
 		single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
 		scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
 		name=`echo $i | sed "s/\^//g"`
-		echo $name:$multi_iter:$single_iter:$scaling >> results.csv
+		echo $name:$multi_iter:$single_iter:$scaling >> $results_file
 	done
 }
 
 save_results()
 {
-	value=`grep CoreMark-PRO  coremark_pro.summary | head -1`
-	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
-	echo "Score:${value_out}"  >>  results.csv
-	grep -q ":::" results.csv
-	if [ $? -eq 0 ]; then
-		echo Failed > test_results_report
+	$TOOLS_BIN/validate_line --results_file $results_file --base_results_file $run_dir/base_test_results/test1/verify
+	if [[ $? -eq 0 ]]; then
+		echo Ran >> test_results_report
 	else
-		echo Ran > test_results_report
+		echo Failed >> test_results_report
 	fi
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results $results_file --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
@@ -295,8 +293,8 @@ run_coremark_pro()
 		source ~/.bashrc
 		cd $curdir
 		arguments="${arguments} --test_iterations ${to_times_to_run}"
-		echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
-		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name_run} --spacing 11 --pbench_stats $to_pstats
+		echo $TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name} --spacing 11 --pbench_stats $to_pstats
+		$TOOLS_BIN/execute_via_pbench --cmd_executing "$0" $arguments --test ${test_name} --spacing 11 --pbench_stats $to_pstats
 		if [ $? -ne 0 ]; then
 			exit_out "Execution via pbench failed\n" 1
 		fi
@@ -375,7 +373,9 @@ install_tools_git "$@"
 # to_tuned_setting: tuned setting
 #
 
+pushd ${curdir} 2> /dev/null
 source ${curdir}/test_tools/general_setup "$@"
+popd 2> /dev/null
 
 ARGUMENT_LIST=(
 	"commit"

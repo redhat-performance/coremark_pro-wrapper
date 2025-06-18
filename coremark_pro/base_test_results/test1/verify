@@ -1,0 +1,4 @@
+%_header
+Test:Multi\siterations:Single\sIterations:Scaling
+%_multiples
+:[0-9.]{1,}:[0-9.]{1,}:[0-9.]{1,}$
