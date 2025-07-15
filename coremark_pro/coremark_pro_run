@@ -26,6 +26,7 @@ commit="none"
 test_name="coremark_pro"
 arguments="$@"
 results_file=results_"${test_name}".csv
+rtc=0
 
 exit_out()
 {
@@ -174,11 +175,7 @@ generate_csv_file()
 save_results()
 {
 	$TOOLS_BIN/validate_line --results_file $results_file --base_results_file $run_dir/base_test_results/test1/verify
-	if [[ $? -eq 0 ]]; then
-		echo Ran >> test_results_report
-	else
-		echo Failed >> test_results_report
-	fi
+	rtc=$?
 	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results $results_file --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
@@ -430,4 +427,4 @@ if [[ -d "coremark-pro" ]]; then
 fi
 run_coremark_pro
 
-exit 0
+exit $rtc
