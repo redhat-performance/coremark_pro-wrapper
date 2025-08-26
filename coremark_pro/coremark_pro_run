@@ -25,6 +25,7 @@ coremark_pro_version="v1.1.2743"
 commit="none"
 test_name_run="coremark_pro"
 arguments="$@"
+rtc=0
 
 exit_out()
 {
@@ -174,14 +175,20 @@ save_results()
 {
 	value=`grep CoreMark-PRO  coremark_pro.summary | head -1`
 	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
-	echo "Score:${value_out}"  >>  results.csv
+	val1=`echo $value | cut -d' ' -f2`
+	val2=`echo $value | cut -d' ' -f3`
+	scaling=`echo "scale = 2;$val1 / ${val2}" | bc -l` 
+	echo "Score:${value_out}:${scaling}"  >>  results.csv
 	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
 		echo Failed > test_results_report
 	else
 		echo Ran > test_results_report
 	fi
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	$TOOLS_BIN/csv_to_json $to_json_flags --csv_file results.csv --output_file ${test_name}.json
+	$TOOLS_BIN/verify_results $to_verify_flags --file ${test_name}.json --schema_file $to_script_dir/result_schema.py --class_name CoremarkProResults
+	rtc=$?
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "*json $summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
@@ -430,4 +437,4 @@ if [[ -d "coremark-pro" ]]; then
 fi
 run_coremark_pro
 
-exit 0
+exit $rtc
