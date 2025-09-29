@@ -257,6 +257,17 @@ run_coremark_pro()
 	pushd coremark-pro > /dev/null
 
 	if [ $to_pbench -eq 0 ]; then
+		if [ $to_use_pcp -eq 1 ]; then
+			source $TOOLS_BIN/pcp/pcp_commands.inc
+			setup_pcp
+			pcp_cfg=$TOOLS_BIN/pcp/default.cfg
+			pcp_dir=/tmp/pcp_coremark-pro_$(date +%Y.%m.%d-%H.%M.%S)
+			start_pcp $pcp_dir coremark-pro $pcp_cfg
+			start_pcp_subset
+
+			pmlogger -c $pcp_cfg -l $pcp_dir/pmlogger.log $pcp_dir/archive & PMLOGGER_PID=$!
+		fi
+
 		#
 		# Iteration of test.
 		#
@@ -276,12 +287,31 @@ run_coremark_pro()
 		fi
 		numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 		for iter in $(seq 1 1 $to_times_to_run); do
+			
+			#If we're using PCP, snap a chalk line at the start of the iteration and log the run number
+			if [[ $to_use_pcp -eq 1 ]]; then
+	        	start_pcp_subset
+				result2pcp iteration ${run_number}
+			fi
+
+			
 			make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
 			make -s $make_flags > coremark_pro_run_${iter}
 			if [ $? -ne 0 ]; then
 				exit_out "Run failed, make $make_flags" 1
 			fi
+
+			# If we're using PCP, snap the chalk line at the end of the iteration
+			if [[ $to_use_pcp -eq 1 ]]; then
+		       	stop_pcp_subset
+			fi
 		done
+
+		# If we're using PCP, stop logging
+	    if [[ $to_use_pcp -eq 1 ]]; then
+	        echo "Stop PCP"
+	      	stop_pcp
+	    fi
 
 		for iter in $(seq 1 1 $to_times_to_run); do
 			produce_summary_report $iter
@@ -289,6 +319,16 @@ run_coremark_pro()
 
 		generate_csv_file
 		save_results
+		
+
+		if [ $to_use_pcp -eq 1 ]; then
+			kill $PMLOGGER_PID 2>/dev/null
+	 		wait $PMLOGGER_PID 2>/dev/null
+			
+			stop_pcp_subset
+		fi
+
+		${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report,$pcp_dir" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 		popd > /dev/null
 	else
 		popd > /dev/null
@@ -301,6 +341,7 @@ run_coremark_pro()
 			exit_out "Execution via pbench failed\n" 1
 		fi
 	fi
+
 }
 
 usage()
