@@ -262,7 +262,6 @@ run_coremark_pro()
 		pcp_cfg=$TOOLS_BIN/pcp/default.cfg
 		pcp_dir=/tmp/pcp_coremark-pro_$(date +%Y.%m.%d-%H.%M.%S)
 		start_pcp $pcp_dir coremark-pro $pcp_cfg
-
 	fi
 
 	#
@@ -324,7 +323,6 @@ run_coremark_pro()
 
 	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report,$pcp_dir" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 	popd > /dev/null
-
 }
 
 usage()
