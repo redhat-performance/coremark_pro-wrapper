@@ -263,7 +263,6 @@ run_coremark_pro()
 		pcp_dir=/tmp/pcp_coremark-pro_$(date +%Y.%m.%d-%H.%M.%S)
 		start_pcp $pcp_dir coremark-pro $pcp_cfg
 
-		pmlogger -c $pcp_cfg -l $pcp_dir/pmlogger.log $pcp_dir/archive & PMLOGGER_PID=$!
 	fi
 
 	#
