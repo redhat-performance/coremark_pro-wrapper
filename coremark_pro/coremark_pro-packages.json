@@ -1,5 +1,13 @@
 {
     "dependencies": {
+        "amzn": [
+            "bc",
+            "gcc",
+            "glibc-devel",
+            "git",
+            "make",
+            "numactl"
+        ],
         "rhel": [
             "bc",
             "gcc",
