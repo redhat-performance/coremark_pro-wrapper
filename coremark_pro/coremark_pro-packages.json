@@ -6,6 +6,14 @@
             "git",
             "make",
             "numactl"
+        ],
+        "ubuntu": [
+            "bc",
+            "gcc",
+            "git",
+            "libc6-dev",
+            "make",
+            "numactl"
         ]
     }
 }
