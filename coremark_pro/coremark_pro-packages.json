@@ -4,29 +4,25 @@
             "bc",
             "gcc",
             "git",
-            "make",
-            "numactl"
+            "make"
         ],
         "rhel": [
             "bc",
             "gcc",
             "git",
-            "make",
-            "numactl"
+            "make"
         ],
         "sles": [
             "bc",
             "gcc",
             "git",
-            "make",
-            "numactl"
+            "make"
         ],
         "ubuntu": [
             "bc",
             "gcc",
             "git",
-            "make",
-            "numactl"
+            "make"
         ]
     }
 }
