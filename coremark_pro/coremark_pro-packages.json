@@ -3,7 +3,6 @@
         "amzn": [
             "bc",
             "gcc",
-            "glibc-devel",
             "git",
             "make",
             "numactl"
@@ -19,7 +18,6 @@
             "bc",
             "gcc",
             "git",
-            "libc6-dev",
             "make",
             "numactl"
         ]
