@@ -4,6 +4,7 @@
             "bc",
             "gcc",
             "git",
+            "perl-Data-Dumper",
             "make"
         ],
         "rhel": [
