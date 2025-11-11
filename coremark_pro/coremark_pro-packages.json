@@ -1,0 +1,29 @@
+{
+    "dependencies": {
+        "amzn": [
+            "bc",
+            "gcc",
+            "git",
+            "perl-Data-Dumper",
+            "make"
+        ],
+        "rhel": [
+            "bc",
+            "gcc",
+            "git",
+            "make"
+        ],
+        "sles": [
+            "bc",
+            "gcc",
+            "git",
+            "make"
+        ],
+        "ubuntu": [
+            "bc",
+            "gcc",
+            "git",
+            "make"
+        ]
+    }
+}
