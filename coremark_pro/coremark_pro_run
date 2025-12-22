@@ -38,6 +38,24 @@ exit_out()
 	exit $2
 }
 
+format_iteration_number()
+{
+	local iter=$1
+	local total=$2
+
+	# No padding needed for less than 10 iterations
+	if [ $total -lt 10 ]; then
+		echo $iter
+		return
+	fi
+
+	# Calculate number of digits needed
+	local digits=${#total}
+
+	# Format with zero padding
+	printf "%0${digits}d" $iter
+}
+
 if [ ! -f "/tmp/${test_name_run}.out" ]; then
 	command="${0} $@"
 	$command &> /tmp/${test_name_run}.out
@@ -110,6 +128,10 @@ pull_data()
 
 produce_summary_report()
 {
+	local iter=$1
+	local total=$2
+	local padded_iter=$(format_iteration_number $iter $total)
+
 	found=0
 	while IFS= read -r line
 	do
@@ -141,7 +163,7 @@ produce_summary_report()
 			found=1
 		fi
 		echo $line >> $summary_file
-	done < "coremark_pro_run_${1}"
+	done < "coremark_pro_run_${padded_iter}"
 }
 
 generate_csv_file()
@@ -298,7 +320,8 @@ run_coremark_pro()
 
 		
 		make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
-		make -s $make_flags > coremark_pro_run_${iter}
+		padded_iter=$(format_iteration_number $iter $to_times_to_run)
+		make -s $make_flags > coremark_pro_run_${padded_iter}
 		if [ $? -ne 0 ]; then
 			exit_out "Run failed, make $make_flags" 1
 		fi
@@ -316,7 +339,7 @@ run_coremark_pro()
     fi
 
 	for iter in $(seq 1 1 $to_times_to_run); do
-		produce_summary_report $iter
+		produce_summary_report $iter $to_times_to_run
 	done
 
 	generate_csv_file
