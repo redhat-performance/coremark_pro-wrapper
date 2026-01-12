@@ -249,12 +249,18 @@ record_pcp_results()
 		cp $results /tmp
 	fi
 	metric_name=`echo "${test}" | sed "s/-//g"`
-	if [[ $multi -eq 1 ]]; then
-		value=`grep "^${test}" $results | awk '{print $2}'`
-	else
-		value=`grep "^${test}" $results | awk '{print $3}'`
+	#
+	# Only if we have results for the test.
+	#
+	grep -q  "^${test}" $results
+	if [[ $? -eq 0 ]]; then
+		if [[ $multi -eq 1 ]]; then
+			value=`grep "^${test}" $results | awk '{print $2}'`
+		else
+			value=`grep "^${test}" $results | awk '{print $3}'`
+		fi
+		result2pcp ${metric_name} ${value}
 	fi
-	result2pcp ${metric_name} ${value}
 }
 
 run_coremark_pro()

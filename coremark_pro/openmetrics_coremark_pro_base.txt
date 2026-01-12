@@ -1,3 +1,9 @@
+iteration
+running
+numthread
+runtime
+throughput
+latency
 multicore
 cjpeg-rose7-preset
 core
