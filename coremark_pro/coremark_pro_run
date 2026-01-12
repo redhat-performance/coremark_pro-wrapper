@@ -23,7 +23,7 @@
 #
 coremark_pro_version="v1.1.2743"
 commit="none"
-test_name_run="coremark_pro"
+test_name="coremark_pro"
 arguments="$@"
 
 exit_out()
@@ -85,8 +85,8 @@ $curdir/test_tools/gather_data ${curdir}
 pull_data()
 {
 	pro_file=`mktemp /tmp/pro_reduce_data.XXXXX`
-	test_name=${1}
-	grep "^${test_name}" coremark_pro_run* | cut -d':' -f2 > ${pro_file}
+	sub_test_name=${1}
+	grep "^${sub_test_name}" coremark_pro_run* | cut -d':' -f2 > ${pro_file}
 	multicore=0.0
 	singlecore=0.0
 	scaling=0.0
@@ -105,7 +105,7 @@ pull_data()
 	multicore=`echo "${multicore}/${iterations}" | bc -l`
 	singlecore=`echo "${singlecore}/${iterations}" | bc -l`
 	scaling=`echo "${scaling}/${iterations}" | bc -l`
-	printf "%-47s %10.2f %10.2f %10.2f\n" $test_name $multicore $singlecore $scaling >> $summary_file
+	printf "%-47s %10.2f %10.2f %10.2f\n" $sub_test_name $multicore $singlecore $scaling >> $summary_file
 }
 
 produce_summary_report()
@@ -133,8 +133,8 @@ produce_summary_report()
 			if [[ ${line} == "CoreMark"* ]]; then
 				found=0
 			fi
-			test_name=`echo $line | awk '{print $1}'`
-			pull_data $test_name
+			sub_test_name=`echo $line | awk '{print $1}'`
+			pull_data $sub_test_name
 			continue
 		fi
 		if [[ $line == "------"* ]]; then
@@ -187,7 +187,7 @@ save_results()
 	else
 		echo Ran > test_results_report
 	fi
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
@@ -239,6 +239,24 @@ update_build_options()
 	popd >/dev/null
 }
 
+record_pcp_results()
+{
+	test="$1"
+	results=$2
+	multi=$3
+
+	if [[ ! -f /tmp/$results ]]; then
+		cp $results /tmp
+	fi
+	metric_name=`echo "${test}" | sed "s/-//g"`
+	if [[ $multi -eq 1 ]]; then
+		value=`grep "^${test}" $results | awk '{print $2}'`
+	else
+		value=`grep "^${test}" $results | awk '{print $3}'`
+	fi
+	result2pcp ${metric_name} ${value}
+}
+
 run_coremark_pro()
 {
 	if [ ! -d coremark-pro ]; then
@@ -264,6 +282,15 @@ run_coremark_pro()
 
 	if [ $to_use_pcp -eq 1 ]; then
 		source $TOOLS_BIN/pcp/pcp_commands.inc
+		#
+		# Create the openmetrics file.
+		#
+		echo "iteration NaN" > ${run_dir}/openmetrics_coremark_pro_reset.txt
+		while IFS= read -r line
+		do
+			metric=`echo $line | sed "s/-//g"`
+			echo "${metric} NaN" >> ${run_dir}/openmetrics_coremark_pro_reset.txt
+		done < "${run_dir}/openmetrics_coremark_pro_base.txt"
 		setup_pcp
 		pcp_cfg=$TOOLS_BIN/pcp/default.cfg
 		pcp_dir=/tmp/pcp_coremark-pro_$(date +%Y.%m.%d-%H.%M.%S)
@@ -289,31 +316,57 @@ run_coremark_pro()
 	fi
 	numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 	for iter in $(seq 1 1 $to_times_to_run); do
-		
 		#If we're using PCP, snap a chalk line at the start of the iteration and log the run number
 		if [[ $to_use_pcp -eq 1 ]]; then
-        	start_pcp_subset
-			result2pcp iteration ${run_number}
+			start_pcp_subset
+			result2pcp iteration ${iter}
 		fi
 
-		
 		make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
 		make -s $make_flags > coremark_pro_run_${iter}
+
 		if [ $? -ne 0 ]; then
 			exit_out "Run failed, make $make_flags" 1
 		fi
 
-		# If we're using PCP, snap the chalk line at the end of the iteration
+		#
+		# If record the results.
+		#
 		if [[ $to_use_pcp -eq 1 ]]; then
-	       	stop_pcp_subset
+			#
+			# Single first
+			#
+			result2pcp iteration ${iter}
+			while IFS= read -r line
+			do
+				result2pcp multicore 0
+				record_pcp_results $line coremark_pro_run_${iter} 0
+#				stop_pcp_subset
+#				start_pcp_subset
+			done < "${run_dir}/openmetrics_coremark_pro_base.txt"
+			#
+			# Now multi
+			#
+			stop_pcp_subset
+			start_pcp_subset
+			result2pcp iteration ${iter}
+			while IFS= read -r line
+			do
+				result2pcp multicore  1
+				record_pcp_results "$line" coremark_pro_run_${iter} 1
+#				stop_pcp_subset
+#				start_pcp_subset
+				result2pcp iteration ${iter}
+				result2pcp multicore  1
+			done < "${run_dir}/openmetrics_coremark_pro_base.txt"
 		fi
 	done
 
 	# If we're using PCP, stop logging
-    if [[ $to_use_pcp -eq 1 ]]; then
-        echo "Stop PCP"
-      	stop_pcp
-    fi
+	if [[ $to_use_pcp -eq 1 ]]; then
+		stop_pcp_subset
+		stop_pcp
+	fi
 
 	for iter in $(seq 1 1 $to_times_to_run); do
 		produce_summary_report $iter
@@ -327,7 +380,7 @@ run_coremark_pro()
 		shutdown_pcp
 	fi
 
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report,$pcp_dir" --results results.csv --test_name coremark_pro --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report,$pcp_dir" --results results.csv --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 	popd > /dev/null
 }
 
