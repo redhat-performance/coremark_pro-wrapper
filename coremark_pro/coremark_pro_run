@@ -245,10 +245,7 @@ record_pcp_results()
 	results=$2
 	multi=$3
 
-	if [[ ! -f /tmp/$results ]]; then
-		cp $results /tmp
-	fi
-	metric_name=`echo "${test}" | sed "s/-//g"`
+	metric_name=`echo "${test}" | sed "s/-//g" | sed "s/ //g" | awk '{print $1}'`
 	#
 	# Only if we have results for the test.
 	#
@@ -259,7 +256,7 @@ record_pcp_results()
 		else
 			value=`grep "^${test}" $results | awk '{print $3}'`
 		fi
-		result2pcp ${metric_name} ${value}
+		results2pcp_add_value "${metric_name}:${value}"
 	fi
 }
 
@@ -291,7 +288,7 @@ run_coremark_pro()
 		#
 		# Create the openmetrics file.
 		#
-		echo "iteration NaN" > ${run_dir}/openmetrics_coremark_pro_reset.txt
+		rm -f ${run_dir}/openmetrics_coremark_pro_reset.txt
 		while IFS= read -r line
 		do
 			metric=`echo $line | sed "s/-//g"`
@@ -342,25 +339,39 @@ run_coremark_pro()
 			#
 			# Single first
 			#
-			result2pcp iteration ${iter}
+			results2pcp_add_value "iteration:${iter}"
+			results2pcp_add_value "multicore:0"
 			while IFS= read -r line
 			do
-				result2pcp multicore 0
-				record_pcp_results $line coremark_pro_run_${iter} 0
+				record_pcp_results "$line" coremark_pro_run_${iter} 0
 			done < "${run_dir}/openmetrics_coremark_pro_base.txt"
+			#
+			# Commit it.
+			#
+			results2pcp_add_value_commit
+			#
+			# Clear it.
+			#
+			reset_pcp_om
+			stop_pcp_subset
+			start_pcp_subset
 			#
 			# Now multi
 			#
-			stop_pcp_subset
-			start_pcp_subset
-			result2pcp iteration ${iter}
+			results2pcp_add_value "iteration:${iter}"
+			results2pcp_add_value "multicore:1"
 			while IFS= read -r line
 			do
-				result2pcp multicore  1
 				record_pcp_results "$line" coremark_pro_run_${iter} 1
-				result2pcp iteration ${iter}
-				result2pcp multicore  1
 			done < "${run_dir}/openmetrics_coremark_pro_base.txt"
+			#
+			# Commit it.
+			#
+			results2pcp_add_value_commit
+			#
+			# Clear it.
+			#
+			reset_pcp_om
 		fi
 	done
 
