@@ -146,12 +146,13 @@ produce_summary_report()
 
 generate_csv_file()
 {
+	start_time="${1}"
+	end_time="${2}"
 	#
 	# Create the csv file.
 	#
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name
-	echo Test:Multi iterations:Single Iterations:Scaling >> results.csv
+	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name --field_header "Test,Multi iterations,Single Iterations,Scaling"
 	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 	for i in $items; do
 		multi_iter=0.0
@@ -172,15 +173,18 @@ generate_csv_file()
 		single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
 		scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
 		name=`echo $i | sed "s/\^//g"`
-		echo $name:$multi_iter:$single_iter:$scaling >> results.csv
+		data_string=$(build_data_string "${name}" "${multi_iter}" "${single_iter}" "${scaling}" "${start_time}" "${end_time}")
+		echo "${data_string}" >> results.csv
 	done
 }
 
 save_results()
 {
 	value=`grep CoreMark-PRO  coremark_pro.summary | head -1`
-	value_out=`echo $value | cut -d' ' -f2,3 | sed "s/ /:/g"`
-	echo "Score:${value_out}"  >>  results.csv
+	value_out1=`echo $value | cut -d' ' -f2`
+	value_out2=`echo $value | cut -d' ' -f3`
+	data_string=$(build_data_string "Score" "${value_out1}" "${value_out2}" "0" "0" "${start_time}" "${end_time}")
+	echo "$data_string"  >>  results.csv
 	grep -q ":::" results.csv
 	if [ $? -eq 0 ]; then
 		echo Failed > test_results_report
@@ -325,13 +329,14 @@ run_coremark_pro()
 			result2pcp iteration ${iter}
 		fi
 
+		start_time=$(retrieve_time_stamp)
 		make_flags="TARGET=linux64 XCMD=-c${numb_cpus} certify-all"
 		make -s $make_flags > coremark_pro_run_${iter}
 
 		if [ $? -ne 0 ]; then
 			exit_out "Run failed, make $make_flags" 1
 		fi
-
+		end_time=$(retrieve_time_stamp)
 		#
 		# If record the results.
 		#
@@ -385,7 +390,7 @@ run_coremark_pro()
 		produce_summary_report $iter
 	done
 
-	generate_csv_file
+	generate_csv_file "$start_time" "$end_time"
 	save_results
 	
 
