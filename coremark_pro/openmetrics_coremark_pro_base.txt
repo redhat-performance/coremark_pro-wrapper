@@ -1,0 +1,17 @@
+iteration
+running
+numthread
+runtime
+throughput
+latency
+multicore
+cjpeg-rose7-preset
+core
+linear_alg-mid-100x100-sp
+loops-all-mid-10k-sp
+nnet_test
+parser-125k
+radix2-big-64k
+sha-test
+zip-test 
+CoreMark-PRO
