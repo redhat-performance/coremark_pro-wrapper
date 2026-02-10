@@ -208,9 +208,6 @@ generate_csv_file()
 		single_iter=`echo "scale = 2;$single_iter / ${samples}.00" | bc -l`
 		scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
 		name=`echo $i | sed "s/\^//g"`
-		#
-		# Force an error
-		#
 		data_string=$(build_data_string "${name}" "${multi_iter}" "${single_iter}" "${scaling}" "${start_time}" "${end_time}")
 		echo "${data_string}" >> results_${test_name}.csv
 	done
