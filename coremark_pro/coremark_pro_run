@@ -22,9 +22,11 @@
 # set of default run parameters based on the system configuration.
 #
 coremark_pro_version="v1.1.2743"
+script_dir=$(realpath $(dirname $0))
 commit="none"
 test_name="coremark_pro"
 arguments="$@"
+rtc=0
 
 exit_out()
 {
@@ -96,9 +98,20 @@ no_overrides=0
 summary_file="coremark_pro.summary"
 rm -f $summary_file
 
-# Gather hardware information
-$curdir/test_tools/gather_data ${curdir}
+tools_git=https://github.com/redhat-performance/test_tools-wrappers
+TOOLS_BIN=${HOME}/test_tools
+export TOOLS_BIN
+if [ ! -d "${TOOLS_BIN}" ]; then
+	git clone $tools_git ${TOOLS_BIN}
+	if [ $? -ne 0 ]; then
+		exit_out "pulling git $tools_git failed." 1
+	fi
+fi
 
+#
+# Gather hardware information
+#
+${TOOLS_BIN}/gather_data ${curdir}
 
 pull_data()
 {
@@ -174,7 +187,7 @@ generate_csv_file()
 	# Create the csv file.
 	#
 
-	$TOOLS_BIN/test_header_info --front_matter --results_file results.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name --field_header "Test,Multi iterations,Single Iterations,Scaling"
+	$TOOLS_BIN/test_header_info --front_matter --results_file results_${test_name}.csv --host $to_configuration --sys_type $to_sys_type --tuned $to_tuned_setting --results_version $coremark_pro_version --test_name $test_name --field_header "Test,Multi_iterations,Single_iterations,Scaling"
 	items="^cjpeg-rose7-preset ^core ^linear_alg-mid-100x100-sp ^loops-all-mid-10k-sp ^nnet_test ^parser-125k ^radix2-big-64k ^sha-test ^zip-test"
 	for i in $items; do
 		multi_iter=0.0
@@ -196,7 +209,7 @@ generate_csv_file()
 		scaling=`echo "scale = 2;$scaling / ${samples}.00" | bc -l` 
 		name=`echo $i | sed "s/\^//g"`
 		data_string=$(build_data_string "${name}" "${multi_iter}" "${single_iter}" "${scaling}" "${start_time}" "${end_time}")
-		echo "${data_string}" >> results.csv
+		echo "${data_string}" >> results_${test_name}.csv
 	done
 }
 
@@ -205,15 +218,13 @@ save_results()
 	value=`grep CoreMark-PRO  coremark_pro.summary | head -1`
 	value_out1=`echo $value | cut -d' ' -f2`
 	value_out2=`echo $value | cut -d' ' -f3`
-	data_string=$(build_data_string "Score" "${value_out1}" "${value_out2}" "0" "0" "${start_time}" "${end_time}")
-	echo "$data_string"  >>  results.csv
-	grep -q ":::" results.csv
-	if [ $? -eq 0 ]; then
-		echo Failed > test_results_report
-	else
-		echo Ran > test_results_report
-	fi
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results.csv --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	scale=`echo "scale=2;$value_out1/$value_out2" | bc`
+	data_string=$(build_data_string "Score" "${value_out1}" "${value_out2}" "${scale}" "${start_time}" "${end_time}")
+	echo "$data_string"  >>  results_${test_name}.csv
+	${TOOLS_BIN}/csv_to_json $to_json_flags --csv_file results_${test_name}.csv --output_file results_${test_name}.json
+	${TOOLS_BIN}/verify_results $to_verify_flags --schema_file $script_dir/results_schema.py --class_name Coremark_Pro_Results --file results_${test_name}.json
+	rtc=$?
+	${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report" --results results_${test_name}.csv --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 }
 
 #
@@ -420,7 +431,7 @@ run_coremark_pro()
 		shutdown_pcp
 	fi
 
-	${curdir}/test_tools/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report,$pcp_dir" --results results.csv --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
+	${TOOLS_BIN}/save_results --curdir $curdir --home_root $to_home_root --other_files "$summary_file,coremark_pro_run*,test_results_report,$pcp_dir" --results results_${test_name}.csv --test_name $test_name --tuned_setting $to_tuned_setting --version $coremark_pro_version --user $to_user
 	popd > /dev/null
 }
 
@@ -430,55 +441,10 @@ usage()
 	echo "  --commit <n>: Commit to use.  If not designated, will use tag ${coremark_pro_version}"
 	echo "  --no-overrides: If present we will not tune the make files"
 	echo "  --test_iterations n: number of times to run the test."
-	source ${curdir}/test_tools/general_setup --usage
+	source ${TOOLS_BIN}/general_setup --usage
 	exit 0
 }
 
-#
-# Clone the repo that contains the common code and tools
-#
-
-install_tools_git()
-{
-	give_usage=0
-	tools_git=https://github.com/redhat-performance/test_tools-wrappers
-
-	found=0
-	for arg in "$@"; do
-		if [ $found -eq 1 ]; then
-			tools_git=$arg
-			found=0
-		fi
-		if [[ $arg == "--tools_git" ]]; then
-			found=1
-		fi
-	
-		#
-		# We do the usage check here, as we do not want to be calling
-		# the common parsers then checking for usage here.  Doing so will
-		# result in the script exiting with out giving the test options.
-		#
-		if [[ $arg == "--usage" ]]; then
-			give_usage=1
-		fi
-	done
-
-	#
-	# Check to see if the test tools directory exists.  If it does, we do not need to
-	# clone the repo.
-	#
-	if [ ! -d "${curdir}/test_tools" ]; then
-		GIT_TERMINAL_PROMPT=0 git clone $tools_git ${curdir}/test_tools
-		if [ $? -ne 0 ]; then
-			exit_out "pulling git $tools_git failed." 1
-		fi
-	fi
-	if [ $give_usage -eq 1 ]; then
-		usage $0
-	fi
-}
-
-install_tools_git "$@"
 #
 # Variables set by general setup.
 #
@@ -496,7 +462,7 @@ install_tools_git "$@"
 # to_tuned_setting: tuned setting
 #
 
-source ${curdir}/test_tools/general_setup "$@"
+source ${TOOLS_BIN}/general_setup "$@"
 
 
 # Install needed packages based on the wrapper's JSON file
@@ -558,4 +524,4 @@ if [[ -d "coremark-pro" ]]; then
 fi
 run_coremark_pro
 
-exit 0
+exit $rtc
