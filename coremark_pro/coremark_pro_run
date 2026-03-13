@@ -335,17 +335,17 @@ run_coremark_pro()
 		if [[ $commit == "none" ]]; then
 			GIT_TERMINAL_PROMPT=0 git -c advice.detachedHead=false clone --depth 1 --branch ${coremark_pro_version} https://github.com/eembc/coremark-pro
 			if [ $? -ne 0 ]; then
-				exit_out "Failed to clone https://github.com/eembc/coremark-pro version ${coremark_pro_version}" 1
+				exit_out "Failed to clone https://github.com/eembc/coremark-pro version ${coremark_pro_version}" $E_GENERAL
 			fi
 		else
 			GIT_TERMINAL_PROMPT=0 git -c advice.detachedHead=false clone https://github.com/eembc/coremark-pro
 			if [ $? != 0 ]; then
-				exit_out "Failed to clone https://github.com/eembc/coremark-pro" 1
+				exit_out "Failed to clone https://github.com/eembc/coremark-pro" $E_GENERAL
 			fi
 			pushd coremark-pro > /dev/null
 			GIT_TERMINAL_PROMPT=0 git checkout ${commit}
 			if [ $? -ne 0 ]; then
-				exit_out "Failed to checkout ${commit}" 1
+				exit_out "Failed to checkout ${commit}" $E_GENERAL
 			fi
 			popd > /dev/null
 		fi
@@ -384,7 +384,7 @@ run_coremark_pro()
 		# Make failed, rerun and do not keep quiet about it.
 		#
 		make TARGET=linux64 build
-		exit_out "make of test failed, exiting" 1
+		exit_out "make of test failed, exiting" $E_GENERAL
 	fi
 	numb_cpus=`cat /proc/cpuinfo | grep processor | wc -l`
 	for iter in $(seq 1 1 $to_times_to_run); do
@@ -399,7 +399,7 @@ run_coremark_pro()
 		padded_iter=$(format_iteration_number $iter $to_times_to_run)
 		make -s $make_flags > coremark_pro_run_${padded_iter}
 		if [ $? -ne 0 ]; then
-			exit_out "Run failed, make $make_flags" 1
+			exit_out "Run failed, make $make_flags" $E_GENERAL
 		fi
 		end_time=$(retrieve_time_stamp)
 		#
@@ -474,7 +474,7 @@ usage()
 	echo "  --no-overrides: If present we will not tune the make files"
 	echo "  --test_iterations n: number of times to run the test."
 	source ${TOOLS_BIN}/general_setup --usage
-	exit 0
+	exit $E_USAGE
 }
 
 #
@@ -500,7 +500,7 @@ source ${TOOLS_BIN}/general_setup "$@"
 # Install needed packages based on the wrapper's JSON file
 package_tool --no_packages $to_no_pkg_install --wrapper_config ${run_dir}/coremark_pro-packages.json
 if [[ $? -ne 0 ]]; then
-	exit_out "package_tool reported failure installing dependencies." 1
+	exit_out "package_tool reported failure installing dependencies." $E_GENERAL
 fi
 
 ARGUMENT_LIST=(
@@ -546,7 +546,7 @@ while [[ $# -gt 0 ]]; do
 			break
 		;;
 		*)
-			exit_out "option not found $1" 1
+			exit_out "option not found $1" $E_GENERAL
 		;;
 	esac
 done
